@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"grpctask/internal/service"
-	pb "grpctask/pkg/api/test"
-	"grpctask/pkg/logger"
 	"log"
 	"net"
 
-	"grpctask/internal/config"
+	"github.com/goodgodx64/orderservice-go/internal/service"
+	pb "github.com/goodgodx64/orderservice-go/pkg/api/grpc"
+	"github.com/goodgodx64/orderservice-go/pkg/logger"
+
+	"github.com/goodgodx64/orderservice-go/internal/config"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

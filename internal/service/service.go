@@ -3,9 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	pb "grpctask/pkg/api/test"
-	"grpctask/pkg/logger"
 	"sync"
+
+	pb "github.com/goodgodx64/orderservice-go/pkg/api/grpc"
+	"github.com/goodgodx64/orderservice-go/pkg/logger"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
