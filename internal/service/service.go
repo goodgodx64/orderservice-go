@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	pb "grpctask/pkg/api/test"
-	"log"
+	"grpctask/pkg/logger"
 	"sync"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type OrderService struct {
@@ -23,11 +24,14 @@ func New() *OrderService {
 }
 
 func (o *OrderService) CreateOrder(ctx context.Context, in *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
-	log.Printf("Created order: %s %d", in.GetItem(), in.GetQuantity())
-	id := uuid.NewString()
+	id := uuid.New().String()
+	logger.GetLoggerFromCtx(ctx).Debug(ctx, "CreateOrder, creating order", zap.String("item", in.GetItem()), zap.Int32("quantity", in.GetQuantity()), zap.String("order_id", id))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
 	o.items[id] = &pb.Order{Id: id, Item: in.GetItem(), Quantity: in.GetQuantity()}
+
 	return &pb.CreateOrderResponse{Id: id}, nil
 }
 
@@ -35,7 +39,9 @@ func (o *OrderService) GetOrder(ctx context.Context, in *pb.GetOrderRequest) (*p
 	if _, ok := o.items[in.GetId()]; !ok {
 		return nil, fmt.Errorf("order with id %s not found", in.GetId())
 	}
-	log.Printf("Returning order with id: %s", in.GetId())
+
+	logger.GetLoggerFromCtx(ctx).Debug(ctx, "GetOrder, returning order", zap.String("order_id", in.GetId()))
+
 	return &pb.GetOrderResponse{Order: o.items[in.GetId()]}, nil
 }
 
@@ -43,13 +49,15 @@ func (o *OrderService) UpdateOrder(ctx context.Context, in *pb.UpdateOrderReques
 	if _, ok := o.items[in.GetId()]; !ok {
 		return nil, fmt.Errorf("order with id %s not found", in.GetId())
 	}
+
+	logger.GetLoggerFromCtx(ctx).Debug(ctx, "UpdateOrder, updating order", zap.String("order_id", in.GetId()), zap.String("new_item", in.GetItem()), zap.Int32("new_quantity", in.GetQuantity()))
+
 	o.mu.Lock()
-	reqOrder := o.items[in.GetId()]
-	log.Printf(`Updating order with id: %s, item: %s, quantity: %d`, reqOrder.GetId(), reqOrder.GetItem(), reqOrder.GetQuantity())
+	defer o.mu.Unlock()
 
 	updatedOrder := &pb.Order{Id: in.GetId(), Item: in.GetItem(), Quantity: in.GetQuantity()}
-	defer o.mu.Unlock()
 	o.items[in.GetId()] = updatedOrder
+
 	return &pb.UpdateOrderResponse{Order: updatedOrder}, nil
 }
 
@@ -57,16 +65,23 @@ func (o *OrderService) DeleteOrder(ctx context.Context, in *pb.DeleteOrderReques
 	if _, ok := o.items[in.GetId()]; !ok {
 		return &pb.DeleteOrderResponse{Success: false}, fmt.Errorf("order with id %s not found", in.GetId())
 	}
+	logger.GetLoggerFromCtx(ctx).Debug(ctx, "DeleteOrder, deleting order", zap.String("order_id", in.GetId()))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
 	delete(o.items, in.GetId())
 	return &pb.DeleteOrderResponse{Success: true}, nil
 }
 
 func (o *OrderService) ListOrders(ctx context.Context, in *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
+	logger.GetLoggerFromCtx(ctx).Debug(ctx, "ListOrders, listing orders")
+
 	var orders []*pb.Order
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
+
 	for _, v := range o.items {
 		orders = append(orders, v)
 	}
